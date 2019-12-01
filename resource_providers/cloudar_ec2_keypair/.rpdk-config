@@ -1,0 +1,10 @@
+{
+    "typeName": "Cloudar::EC2::KeyPair",
+    "language": "python37",
+    "runtime": "python3.7",
+    "entrypoint": "cloudar_ec2_keypair.handlers.resource",
+    "testEntrypoint": "cloudar_ec2_keypair.handlers.test_entrypoint",
+    "settings": {
+        "use_docker": true
+    }
+}
