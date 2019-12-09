@@ -35,8 +35,7 @@ def create_handler(
 ) -> ProgressEvent:
     model = request.desiredResourceState
     progress: ProgressEvent = ProgressEvent(
-        status=OperationStatus.IN_PROGRESS,
-        resourceModel=model,
+        status=OperationStatus.IN_PROGRESS, resourceModel=model
     )
     ec2 = session.client("ec2")  # type: botostubs.EC2
 
@@ -81,8 +80,7 @@ def delete_handler(
 ) -> ProgressEvent:
     model = request.desiredResourceState
     progress: ProgressEvent = ProgressEvent(
-        status=OperationStatus.IN_PROGRESS,
-        resourceModel=model,
+        status=OperationStatus.IN_PROGRESS, resourceModel=model
     )
     ec2 = session.client("ec2")  # type: botostubs.EC2
     # DeleteKeyPair does not raise an exception if the KeyPair does not exist
@@ -117,10 +115,7 @@ def read_handler(
     keypair = keypairs[0]
     model.Fingerprint = keypair["KeyFingerprint"]
 
-    return ProgressEvent(
-        status=OperationStatus.SUCCESS,
-        resourceModel=model,
-    )
+    return ProgressEvent(status=OperationStatus.SUCCESS, resourceModel=model)
 
 
 @resource.handler(Action.LIST)
