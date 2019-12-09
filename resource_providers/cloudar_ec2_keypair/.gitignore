@@ -1,3 +1,6 @@
+# Dry run creates this file
+cloudar-ec2-keypair.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

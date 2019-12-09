@@ -1,104 +1,67 @@
 {
     "typeName": "Cloudar::EC2::KeyPair",
-    "description": "An example resource schema demonstrating some basic constructs and validation rules.",
-    "sourceUrl": "https://github.com/aws-cloudformation/aws-cloudformation-rpdk.git",
-    "definitions": {
-        "InitechDateFormat": {
-            "$comment": "Use the `definitions` block to provide shared resource property schemas",
-            "type": "string",
-            "format": "date-time"
-        },
-        "Memo": {
-            "type": "object",
-            "properties": {
-                "Heading": {
-                    "type": "string"
-                },
-                "Body": {
-                    "type": "string"
-                }
-            },
-            "additionalProperties": false
-        }
-    },
+    "description": "Provides an EC2 key pair resource. A key pair is used to control login access to EC2 instances. This resource requires an existing user-supplied key pair.",
+    "sourceUrl": "https://cloudar.be",
     "properties": {
-        "TPSCode": {
-            "description": "A TPS Code is automatically generated on creation and assigned as the unique identifier.",
+        "KeyName": {
+            "description": "The name for the key pair.",
             "type": "string",
-            "pattern": "^[A-Z]{3,5}[0-9]{8}-[0-9]{4}$"
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255
         },
-        "Title": {
-            "description": "The title of the TPS report is a mandatory element.",
-            "type": "string",
-            "minLength": 20,
-            "maxLength": 250
+        "PublicKey": {
+            "description": "The public key material.",
+            "type": "string"
         },
-        "CoverSheetIncluded": {
-            "description": "Required for all TPS Reports submitted after 2/19/1999",
-            "type": "boolean"
-        },
-        "DueDate": {
-            "$ref": "#/definitions/InitechDateFormat"
-        },
-        "ApprovalDate": {
-            "$ref": "#/definitions/InitechDateFormat"
-        },
-        "Memo": {
-            "$ref": "#/definitions/Memo"
-        },
-        "SecondCopyOfMemo": {
-            "description": "In case you didn't get the first one.",
-            "$ref": "#/definitions/Memo"
-        },
-        "TestCode": {
-            "type": "string",
-            "enum": [
-                "NOT_STARTED",
-                "CANCELLED"
-            ]
-        },
-        "Authors": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
+        "Fingerprint": {
+            "description": "The MD5 public key fingerprint as specified in section 4 of RFC 4716.",
+            "type": "string"
         }
     },
-    "additionalProperties": false,
     "required": [
-        "TestCode",
-        "Title"
+        "KeyName",
+        "PublicKey"
+    ],
+    "additionalIdentifiers": [
+        [
+            "/properties/Fingerprint"
+        ]
     ],
     "readOnlyProperties": [
-        "/properties/TPSCode"
+        "/properties/Fingerprint"
+    ],
+    "writeOnlyProperties": [
+        "/properties/PublicKey"
+    ],
+    "createOnlyProperties": [
+        "/properties/PublicKey",
+        "/properties/KeyName"
     ],
     "primaryIdentifier": [
-        "/properties/TPSCode"
+        "/properties/KeyName"
     ],
+    "additionalProperties": false,
     "handlers": {
         "create": {
             "permissions": [
-                "initech:CreateReport"
+                "ec2:ImportKeyPair"
             ]
         },
         "read": {
             "permissions": [
-                "initech:DescribeReport"
-            ]
-        },
-        "update": {
-            "permissions": [
-                "initech:UpdateReport"
+                "ec2:DescribeKeyPairs"
             ]
         },
         "delete": {
             "permissions": [
-                "initech:DeleteReport"
+                "ec2:DeleteKeyPair",
+                "ec2:DescribeKeyPairs"
             ]
         },
         "list": {
             "permissions": [
-                "initech:ListReports"
+                "ec2:DescribeKeyPairs"
             ]
         }
     }

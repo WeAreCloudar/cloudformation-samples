@@ -23,11 +23,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                - "initech:CreateReport"
-                - "initech:DeleteReport"
-                - "initech:DescribeReport"
-                - "initech:ListReports"
-                - "initech:UpdateReport"
+                - "ec2:DeleteKeyPair"
+                - "ec2:DescribeKeyPairs"
+                - "ec2:ImportKeyPair"
                 Resource: "*"
 Outputs:
   ExecutionRoleArn:
