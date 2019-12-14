@@ -1,0 +1,18 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+cloudformation-cli-python-plugin = {editable= true, git = "https://github.com/aws-cloudformation/aws-cloudformation-rpdk-python-plugin.git"}
+# We install from git, because v0.0.1 does not have the right contract tests for providers with writeOnlyProperties
+# We need commit
+cloudformation-cli = "*"
+# aws-sam-cli requires a higher version of docker than cloudformation-cli-python-plugin
+# see https://github.com/aws-cloudformation/cloudformation-cli-python-plugin/issues/73
+# aws-sam-cli = "*"
+
+[packages]
+
+[requires]
+python_version = "3.7"
