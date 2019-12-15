@@ -34,9 +34,6 @@ def create_handler(
     callback_context: MutableMapping[str, Any],
 ) -> ProgressEvent:
     model = request.desiredResourceState
-    progress: ProgressEvent = ProgressEvent(
-        status=OperationStatus.IN_PROGRESS, resourceModel=model
-    )
     ec2 = session.client("ec2")  # type: botostubs.EC2
 
     try:
@@ -53,9 +50,7 @@ def create_handler(
     model.Fingerprint = response["KeyFingerprint"]
 
     # Setting Status to success will signal to cfn that the operation is complete
-    progress.resourceModel = model
-    progress.status = OperationStatus.SUCCESS
-    return progress
+    return ProgressEvent(status=OperationStatus.SUCCESS, resourceModel=model)
 
 
 # @resource.handler(Action.UPDATE)
@@ -79,18 +74,15 @@ def delete_handler(
     callback_context: MutableMapping[str, Any],
 ) -> ProgressEvent:
     model = request.desiredResourceState
-    progress: ProgressEvent = ProgressEvent(
-        status=OperationStatus.IN_PROGRESS, resourceModel=model
-    )
     ec2 = session.client("ec2")  # type: botostubs.EC2
+
     # DeleteKeyPair does not raise an exception if the KeyPair does not exist
     # The contract requires us to make a distinction between does not exist and
     # a successful delete, so we need to read first (the read handler will throw
     # an exception if the KeyPair does not exist).
     _ = read_handler(session, request, callback_context)
     ec2.delete_key_pair(KeyName=model.KeyName)
-    progress.status = OperationStatus.SUCCESS
-    return progress
+    return ProgressEvent(status=OperationStatus.SUCCESS, resourceModel=model)
 
 
 @resource.handler(Action.READ)
