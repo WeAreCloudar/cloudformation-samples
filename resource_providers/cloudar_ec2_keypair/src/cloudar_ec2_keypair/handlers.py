@@ -48,6 +48,9 @@ def create_handler(
             raise
 
     model.Fingerprint = response["KeyFingerprint"]
+    # Set the PublicKey to None, it's a writeOnlyProperty.
+    # See https://github.com/aws-cloudformation/cloudformation-cli/issues/370
+    model.PublicKey = None
 
     # Setting Status to success will signal to cfn that the operation is complete
     return ProgressEvent(status=OperationStatus.SUCCESS, resourceModel=model)
@@ -91,23 +94,24 @@ def read_handler(
     request: ResourceHandlerRequest,
     callback_context: MutableMapping[str, Any],
 ) -> ProgressEvent:
-    model = request.desiredResourceState
+    # Read should not return writeOnlyProperties, and do a full read of the resource
+    # See https://github.com/aws-cloudformation/cloudformation-cli/issues/370
+    key_name = request.desiredResourceState.KeyName
     ec2 = session.client("ec2")  # type: botostubs.EC2
     try:
-        keypairs = ec2.describe_key_pairs(KeyNames=[model.KeyName])["KeyPairs"]
+        keypairs = ec2.describe_key_pairs(KeyNames=[key_name])["KeyPairs"]
     except ClientError as e:
         if e.response.get("Error", {}).get("Code") == "InvalidKeyPair.NotFound":
-            raise exceptions.NotFound(TYPE_NAME, model.KeyName)
+            raise exceptions.NotFound(TYPE_NAME, key_name)
         else:
             # raise the original exception
             raise
     if not len(keypairs) == 1:
-        raise exceptions.NotFound(TYPE_NAME, model.KeyName)
+        raise exceptions.NotFound(TYPE_NAME, key_name)
 
-    keypair = keypairs[0]
-    model.Fingerprint = keypair["KeyFingerprint"]
-
-    return ProgressEvent(status=OperationStatus.SUCCESS, resourceModel=model)
+    return ProgressEvent(
+        status=OperationStatus.SUCCESS, resourceModel=_create_model(keypairs[0])
+    )
 
 
 @resource.handler(Action.LIST)
@@ -116,29 +120,20 @@ def list_handler(
     request: ResourceHandlerRequest,
     callback_context: MutableMapping[str, Any],
 ) -> ProgressEvent:
-    model = request.desiredResourceState
     ec2 = session.client("ec2")  # type: botostubs.EC2
     keypairs = ec2.describe_key_pairs()["KeyPairs"]
 
     return ProgressEvent(
         status=OperationStatus.SUCCESS,
-        resourceModels=[_create_model(x, model) for x in keypairs],
+        resourceModels=[_create_model(x) for x in keypairs],
     )
 
 
-def _create_model(o: Mapping, model: ResourceModel) -> ResourceModel:
-
-    # This might be workaround for an error in the test, or actual desired
-    # behaviour.
-    # See https://github.com/aws-cloudformation/cloudformation-cli/issues/370
-    if model.KeyName == o["KeyName"]:
-        public_key = model.PublicKey
-    else:
-        public_key = None
+def _create_model(o: Mapping) -> ResourceModel:
     return ResourceModel(
         KeyName=o["KeyName"],
         Fingerprint=o["KeyFingerprint"],
         # There is no way to get the PublicKey from the EC2 api.
         # That's why it's defined as a writeOnlyProperty in the resource spec.
-        PublicKey=public_key,
+        PublicKey=None,
     )
