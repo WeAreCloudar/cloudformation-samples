@@ -57,7 +57,7 @@ def create_handler(
 
 
 # @resource.handler(Action.UPDATE)
-# We could specify an update handler, but because every property triggers an update
+# We could specify an update handler, but because every property triggers a replacement
 # we can let CloudFormation do this for us (If the resource provider does not contain
 # an update handler, CloudFormation cannot update the resource during stack update
 # operations, and will instead replace it).
