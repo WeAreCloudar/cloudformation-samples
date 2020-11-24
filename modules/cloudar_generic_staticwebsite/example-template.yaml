@@ -1,0 +1,12 @@
+Description: A static website - only works in us-east-1
+Parameters:
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: "AWS::Route53::HostedZone::Id"
+Resources:
+  StaticWebsite:
+    Type: "Cloudar::Generic::StaticWebsite::MODULE"
+    Properties:
+      DomainName: !Ref DomainName
+      HostedZoneId: !Ref HostedZoneId
