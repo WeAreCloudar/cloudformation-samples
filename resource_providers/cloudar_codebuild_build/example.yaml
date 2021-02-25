@@ -1,0 +1,72 @@
+Parameters:
+  Trigger:
+    Description: Change this to trigger the build again
+    Type: String
+    Default: ''
+Resources:
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: codebuild.amazonaws.com }
+            Action: sts:AssumeRole
+      # Policies based on the project name have to be added as a seperate resource Otherwise we get a loop  
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Description: !Sub "Example CodeBuild Project from ${AWS::StackName}"
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        Type: LINUX_CONTAINER # available in the most regions
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            build:
+              commands:
+                - uptime
+                - env
+  
+  CodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${CodeBuildProject}"
+  
+  CodeBuildLogPermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: [ !Ref CodeBuildRole ]
+      PolicyName: !Sub "CodebuildLog-${AWS::Region}-${AWS::StackName}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            # The Arn already contains :*, bad for an output, good for a policy
+            # Defined below
+            Resource: !GetAtt CodeBuildLogGroup.Arn
+
+  CodeBuildBuild:
+    Type: Cloudar::CodeBuild::Build
+    # Make sure we can write logs before building
+    DependsOn: CodeBuildLogPermissions
+    # Keep old versions around, that's easier to debug failures
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    # cfn-lint might not know about this type
+    Metadata:
+      cfn-lint: {config: {ignore_checks: [E3001]}}
+    Properties:
+      ProjectName: !Ref CodeBuildProject
+      # Trigger is optional, usually you would feed some that you know will change into ut
+      ResourceTrigger: !Ref Trigger
