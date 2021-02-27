@@ -15,13 +15,20 @@ from cloudformation_cli_python_lib.exceptions import (
 )
 
 from .constants import BuildStatus, TYPE_NAME
-from .models import ResourceModel
+from .models import ResourceModel, EnvironmentVariable
 
 
 def create_start(session: SessionProxy, model: ResourceModel) -> "Action":
     codebuild = session.client("codebuild")
 
-    build = codebuild.start_build(projectName=model.ProjectName)["build"]
+    kwargs = {"projectName": model.ProjectName}
+    # Optional parameter
+    if model.EnvironmentVariablesOverride:
+        kwargs["environmentVariablesOverride"] = [
+            _environment_variable(x) for x in model.EnvironmentVariablesOverride
+        ]
+
+    build = codebuild.start_build(**kwargs)["build"]
     model.BuildId = build["id"]
     model.Arn = build["arn"]
     model.BuildNumber = build["buildNumber"]
@@ -99,5 +106,16 @@ def _read_model(session: SessionProxy, model: ResourceModel) -> None:
     model.BuildId = build["id"]
     model.Arn = build["arn"]
     model.BuildNumber = build["buildNumber"]
+    # we defined EnvironmentVariablesOverride as writeOnlyProperty, because we can't tell the difference
+    # between reading an override and reading en environment variable set on the project
+
     # model is mutable, so we don't have to return something
     return
+
+
+def _environment_variable(environment_variable: EnvironmentVariable):
+    # Name and Value are required by the schema
+    output = {"name": environment_variable.Name, "value": environment_variable.Value}
+    if environment_variable.Type:
+        output["type"] = environment_variable.Type
+    return output

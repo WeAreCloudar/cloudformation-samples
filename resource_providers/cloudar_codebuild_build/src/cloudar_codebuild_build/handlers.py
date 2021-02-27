@@ -22,7 +22,6 @@ from .models import ResourceHandlerRequest, ResourceModel
 # Use this logger to forward log messages to CloudWatch Logs.
 LOG = logging.getLogger(__name__)
 
-
 resource = Resource(TYPE_NAME, ResourceModel)
 test_entrypoint = resource.test_entrypoint
 
@@ -75,15 +74,8 @@ def _action_handler(
     if session is None:
         raise InternalFailure("No AWS credentials found: no session set")
 
-    # ResourceTrigger is part of the desiredResourceState, but we consider it a write only property
-    # We can't return those properties. The only reason we have this property is to force a create
-    # So we can safely delete it, we don't need it anymore
-    model.ResourceTrigger = None
-
     # Get next action
-    next_action: HandlerAction = HandlerAction[
-        callback_context.get("next_action", start_action.name)
-    ]
+    next_action: HandlerAction = HandlerAction[callback_context.get("next_action", start_action.name)]
 
     # Some exceptions are always handled the same, so we can catch them here instead of in the actions
     codebuild_exceptions = session.client("codebuild").exceptions
@@ -96,6 +88,11 @@ def _action_handler(
         raise ServiceLimitExceeded() from e
     except codebuild_exceptions.InvalidInputException as e:
         raise InvalidRequest() from e
+
+    # EnvironmentVariablesOverride is part of the desiredResourceState, but we consider it a write only property
+    # (because it's not possible to always read it correctly). We can't return write only properties. according to the
+    # contract. Once we executed all our actions we can delete it.
+    model.EnvironmentVariablesOverride = None
 
     # Handle cases where there is no next action to take
     if next_action is HandlerAction.DELETE_COMPLETE:

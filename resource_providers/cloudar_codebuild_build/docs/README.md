@@ -13,7 +13,7 @@ To declare this entity in your AWS CloudFormation template, use the following sy
     "Type" : "Cloudar::CodeBuild::Build",
     "Properties" : {
         "<a href="#projectname" title="ProjectName">ProjectName</a>" : <i>String</i>,
-        "<a href="#resourcetrigger" title="ResourceTrigger">ResourceTrigger</a>" : <i>String</i>,
+        "<a href="#environmentvariablesoverride" title="EnvironmentVariablesOverride">EnvironmentVariablesOverride</a>" : <i>[ <a href="environmentvariable.md">EnvironmentVariable</a>, ... ]</i>,
     }
 }
 </pre>
@@ -24,7 +24,8 @@ To declare this entity in your AWS CloudFormation template, use the following sy
 Type: Cloudar::CodeBuild::Build
 Properties:
     <a href="#projectname" title="ProjectName">ProjectName</a>: <i>String</i>
-    <a href="#resourcetrigger" title="ResourceTrigger">ResourceTrigger</a>: <i>String</i>
+    <a href="#environmentvariablesoverride" title="EnvironmentVariablesOverride">EnvironmentVariablesOverride</a>: <i>
+      - <a href="environmentvariable.md">EnvironmentVariable</a></i>
 </pre>
 
 ## Properties
@@ -41,13 +42,11 @@ _Pattern_: <code>^[a-zA-Z0-9_-]{2,}$</code>
 
 _Update requires_: [Replacement](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-update-behaviors.html#update-replacement)
 
-#### ResourceTrigger
-
-Change this value to trigger a new build
+#### EnvironmentVariablesOverride
 
 _Required_: No
 
-_Type_: String
+_Type_: List of <a href="environmentvariable.md">EnvironmentVariable</a>
 
 _Update requires_: [Replacement](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-update-behaviors.html#update-replacement)
 

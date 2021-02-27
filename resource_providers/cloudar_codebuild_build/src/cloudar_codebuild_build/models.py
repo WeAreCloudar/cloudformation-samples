@@ -40,7 +40,7 @@ class ResourceHandlerRequest(BaseResourceHandlerRequest):
 @dataclass
 class ResourceModel(BaseModel):
     ProjectName: Optional[str]
-    ResourceTrigger: Optional[str]
+    EnvironmentVariablesOverride: Optional[Sequence["_EnvironmentVariable"]]
     BuildId: Optional[str]
     Arn: Optional[str]
     BuildNumber: Optional[float]
@@ -56,7 +56,7 @@ class ResourceModel(BaseModel):
         recast_object(cls, json_data, dataclasses)
         return cls(
             ProjectName=json_data.get("ProjectName"),
-            ResourceTrigger=json_data.get("ResourceTrigger"),
+            EnvironmentVariablesOverride=deserialize_list(json_data.get("EnvironmentVariablesOverride"), EnvironmentVariable),
             BuildId=json_data.get("BuildId"),
             Arn=json_data.get("Arn"),
             BuildNumber=json_data.get("BuildNumber"),
@@ -65,5 +65,29 @@ class ResourceModel(BaseModel):
 
 # work around possible type aliasing issues when variable has same name as a model
 _ResourceModel = ResourceModel
+
+
+@dataclass
+class EnvironmentVariable(BaseModel):
+    Value: Optional[str]
+    Type: Optional[str]
+    Name: Optional[str]
+
+    @classmethod
+    def _deserialize(
+        cls: Type["_EnvironmentVariable"],
+        json_data: Optional[Mapping[str, Any]],
+    ) -> Optional["_EnvironmentVariable"]:
+        if not json_data:
+            return None
+        return cls(
+            Value=json_data.get("Value"),
+            Type=json_data.get("Type"),
+            Name=json_data.get("Name"),
+        )
+
+
+# work around possible type aliasing issues when variable has same name as a model
+_EnvironmentVariable = EnvironmentVariable
 
 

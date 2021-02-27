@@ -69,4 +69,6 @@ Resources:
     Properties:
       ProjectName: !Ref CodeBuildProject
       # Trigger is optional, usually you would feed some that you know will change into ut
-      ResourceTrigger: !Ref Trigger
+      EnvironmentVariablesOverride:
+        - Name: DUMMY
+          Value: !Ref Trigger

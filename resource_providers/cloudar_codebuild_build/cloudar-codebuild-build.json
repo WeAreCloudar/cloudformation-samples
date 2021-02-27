@@ -2,16 +2,38 @@
     "typeName": "Cloudar::CodeBuild::Build",
     "description": "Start a CodeBuild Build. It's highly recommended to either write the CodeBuild logs to S3/CloudWatch, or to  have prevent this resource from being deleted when CloudFormation performs a rollback",
     "sourceUrl": "https://github.com/WeAreCloudar/cloudformation-samples.git",
-    "definitions": {},
+    "definitions": {
+        "EnvironmentVariable" : {
+            "type" : "object",
+            "additionalProperties" : false,
+            "properties" : {
+                "Value" : {
+                    "type" : "string"
+                },
+                "Type" : {
+                    "type" : "string",
+                    "enum": ["PLAINTEXT", "PARAMETER_STORE", "SECRETS_MANAGER"]
+                },
+                "Name" : {
+                    "type" : "string",
+                    "minLength": 1
+                }
+            },
+            "required" : [ "Value", "Name" ]
+        }
+    },
     "properties": {
         "ProjectName": {
             "description": "The name of the AWS CodeBuild build project to start running a build",
             "type": "string",
             "pattern": "^[a-zA-Z0-9_-]{2,}$"
         },
-        "ResourceTrigger": {
-            "description": "Change this value to trigger a new build",
-            "type": "string"
+        "EnvironmentVariablesOverride": {
+            "type": "array",
+            "uniqueItems": false,
+            "items": {
+                "$ref": "#/definitions/EnvironmentVariable"
+            }
         },
         "BuildId": {
             "description": "The Identifier of the build",
@@ -37,10 +59,10 @@
     ],
     "createOnlyProperties": [
         "/properties/ProjectName",
-        "/properties/ResourceTrigger"
+        "/properties/EnvironmentVariablesOverride"
     ],
     "writeOnlyProperties": [
-        "/properties/ResourceTrigger"
+        "/properties/EnvironmentVariablesOverride"
     ],
     "primaryIdentifier": [
         "/properties/BuildId"
