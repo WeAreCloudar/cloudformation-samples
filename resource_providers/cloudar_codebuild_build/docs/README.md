@@ -14,6 +14,7 @@ To declare this entity in your AWS CloudFormation template, use the following sy
     "Properties" : {
         "<a href="#projectname" title="ProjectName">ProjectName</a>" : <i>String</i>,
         "<a href="#environmentvariablesoverride" title="EnvironmentVariablesOverride">EnvironmentVariablesOverride</a>" : <i>[ <a href="environmentvariable.md">EnvironmentVariable</a>, ... ]</i>,
+        "<a href="#debugsessionenabled" title="DebugSessionEnabled">DebugSessionEnabled</a>" : <i>Boolean</i>,
     }
 }
 </pre>
@@ -26,6 +27,7 @@ Properties:
     <a href="#projectname" title="ProjectName">ProjectName</a>: <i>String</i>
     <a href="#environmentvariablesoverride" title="EnvironmentVariablesOverride">EnvironmentVariablesOverride</a>: <i>
       - <a href="environmentvariable.md">EnvironmentVariable</a></i>
+    <a href="#debugsessionenabled" title="DebugSessionEnabled">DebugSessionEnabled</a>: <i>Boolean</i>
 </pre>
 
 ## Properties
@@ -47,6 +49,16 @@ _Update requires_: [Replacement](https://docs.aws.amazon.com/AWSCloudFormation/l
 _Required_: No
 
 _Type_: List of <a href="environmentvariable.md">EnvironmentVariable</a>
+
+_Update requires_: [Replacement](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-update-behaviors.html#update-replacement)
+
+#### DebugSessionEnabled
+
+Specifies if session debugging is enabled for this build
+
+_Required_: No
+
+_Type_: Boolean
 
 _Update requires_: [Replacement](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-update-behaviors.html#update-replacement)
 
@@ -73,4 +85,8 @@ The Arn of the build
 #### BuildNumber
 
 The number of the build
+
+#### SessionTarget
+
+The identifier of the Session Manager session used for the build
 

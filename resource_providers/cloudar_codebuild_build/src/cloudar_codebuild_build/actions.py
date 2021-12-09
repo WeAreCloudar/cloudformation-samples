@@ -22,11 +22,13 @@ def create_start(session: SessionProxy, model: ResourceModel) -> "Action":
     codebuild = session.client("codebuild")
 
     kwargs = {"projectName": model.ProjectName}
-    # Optional parameter
+    # Optional parameters. These are all create only, so we don't have to save them in the model.
     if model.EnvironmentVariablesOverride:
         kwargs["environmentVariablesOverride"] = [
             _environment_variable(x) for x in model.EnvironmentVariablesOverride
         ]
+    if model.DebugSessionEnabled is not None:
+        kwargs["debugSessionEnabled"] = model.DebugSessionEnabled
 
     build = codebuild.start_build(**kwargs)["build"]
     model.BuildId = build["id"]
@@ -106,6 +108,8 @@ def _read_model(session: SessionProxy, model: ResourceModel) -> None:
     model.BuildId = build["id"]
     model.Arn = build["arn"]
     model.BuildNumber = build["buildNumber"]
+    # SessionTarget is optional / dependent on the DebugSessionEnabled property
+    model.SessionTarget = build.get("debugSession", {}).get("sessionTarget")
     # we defined EnvironmentVariablesOverride as writeOnlyProperty, because we can't tell the difference
     # between reading an override and reading en environment variable set on the project
 

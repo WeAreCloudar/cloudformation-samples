@@ -42,9 +42,11 @@ class ResourceHandlerRequest(BaseResourceHandlerRequest):
 class ResourceModel(BaseModel):
     ProjectName: Optional[str]
     EnvironmentVariablesOverride: Optional[Sequence["_EnvironmentVariable"]]
+    DebugSessionEnabled: Optional[bool]
     BuildId: Optional[str]
     Arn: Optional[str]
     BuildNumber: Optional[float]
+    SessionTarget: Optional[str]
 
     @classmethod
     def _deserialize(
@@ -58,9 +60,11 @@ class ResourceModel(BaseModel):
         return cls(
             ProjectName=json_data.get("ProjectName"),
             EnvironmentVariablesOverride=deserialize_list(json_data.get("EnvironmentVariablesOverride"), EnvironmentVariable),
+            DebugSessionEnabled=json_data.get("DebugSessionEnabled"),
             BuildId=json_data.get("BuildId"),
             Arn=json_data.get("Arn"),
             BuildNumber=json_data.get("BuildNumber"),
+            SessionTarget=json_data.get("SessionTarget"),
         )
 
 

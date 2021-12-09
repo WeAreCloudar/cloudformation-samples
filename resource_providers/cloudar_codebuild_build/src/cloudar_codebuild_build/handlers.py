@@ -43,6 +43,8 @@ def create_handler(
             raise InvalidRequest("Arn is a readOnlyProperty")
         if request.desiredResourceState.BuildNumber:
             raise InvalidRequest("BuildNumber is a readOnlyProperty")
+        if request.desiredResourceState.SessionTarget:
+            raise InvalidRequest("SessionTarget is a readOnlyProperty")
     return _action_handler(session, request, callback_context, HandlerAction.CREATE)
 
 
