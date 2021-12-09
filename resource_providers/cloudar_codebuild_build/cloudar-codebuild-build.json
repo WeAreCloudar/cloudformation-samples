@@ -2,6 +2,9 @@
     "typeName": "Cloudar::CodeBuild::Build",
     "description": "Start a CodeBuild Build. It's highly recommended to either write the CodeBuild logs to S3/CloudWatch, or to  have prevent this resource from being deleted when CloudFormation performs a rollback",
     "sourceUrl": "https://github.com/WeAreCloudar/cloudformation-samples.git",
+    "tagging": {
+        "taggable": false
+    },
     "definitions": {
         "EnvironmentVariable" : {
             "type" : "object",
@@ -33,7 +36,8 @@
             "uniqueItems": false,
             "items": {
                 "$ref": "#/definitions/EnvironmentVariable"
-            }
+            },
+            "insertionOrder": false
         },
         "BuildId": {
             "description": "The Identifier of the build",
