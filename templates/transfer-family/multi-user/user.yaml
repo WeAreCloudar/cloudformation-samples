@@ -1,0 +1,28 @@
+---
+Parameters:
+  UserName:
+    Type: String
+    Description: The username for this user
+  PublicKey:
+    Type: String
+    Description: The Public Key that the user will use to access the SFTP endpoint.
+  ServerStack:
+    Type: String
+    Description: >
+      The name of the stack that contains the AWS Transfer Family Server.
+      This is used to for the (shared) server, storage bucket and IAM role.
+Resources:
+  TransferUser:
+    Type: AWS::Transfer::User
+    Properties:
+      UserName: !Ref UserName
+      SshPublicKeys: [!Ref PublicKey]
+      ServerId: !ImportValue {Fn::Sub: "${ServerStack}-TransferServerId"}
+      Role: !ImportValue {Fn::Sub: "${ServerStack}-TransferSharedRoleArn"}
+      HomeDirectoryType: LOGICAL
+      HomeDirectoryMappings:
+        - Entry: /
+          Target: !Sub
+            - "/${Bucket}/home/${TransferUserName}"
+            - Bucket: !ImportValue {Fn::Sub: "${ServerStack}-BucketName"}
+              TransferUserName: "${Transfer:UserName}"
