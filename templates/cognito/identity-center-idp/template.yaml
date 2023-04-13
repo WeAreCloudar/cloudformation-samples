@@ -1,0 +1,85 @@
+---
+Parameters:
+  # SSO
+  MetadataUrl:
+    Type: String
+    AllowedPattern: "^https://portal.sso.[a-z0-9-]+.amazonaws.com/saml/metadata/[a-zA-Z0-9]+$"
+    Description: Copy from Identity Center Console ("IAM Identity Center SAML metadata file")
+  # Cognito
+  UserPoolDomainPrefix:
+    Type: String
+    Description: The domain to use for the userpool
+  # Application
+  StartUrl:
+    Type: String
+    Description: Url of your application that will start the login flow
+    Default: https://openidconnect.net/
+  CallbackUrls:
+    Type: CommaDelimitedList
+    Description: Application CallbackUrl.
+    Default: https://openidconnect.net/callback
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Ref UserPoolDomainPrefix
+  IdentityCenterIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: IdentitiyCenter
+      ProviderType: SAML
+      AttributeMapping:
+        email: email
+        email_verified: email_verified
+      ProviderDetails:
+        MetadataURL: !Ref MetadataUrl
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlows: [code]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes: [email, openid]  # openid is required with email scope
+      CallbackURLs: !Ref CallbackUrls
+      DefaultRedirectURI: !Select [0, !Ref CallbackUrls]
+      ExplicitAuthFlows: []  # only oath flows
+      GenerateSecret: true
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders: [!Ref IdentityCenterIdentityProvider]
+      UserPoolId: !Ref UserPool
+      WriteAttributes:
+        # The docs say "If your app client allows users to sign in through an IdP, this array must
+        # include all attributes that you have mapped to IdP attributes", but email_verified does
+        # not seem to be valid here
+        - email
+
+Outputs:
+  # SSO
+  ApplicationStartUrl:
+    Description: "Application start URL - (optional)"
+    Value: !Ref StartUrl
+  RelayState:
+    Description: "Relay state - (optional)"
+    Value: ""
+  ApplicationAcsUrl:
+    Description: "Application ACS URL"
+    Value: !Sub "https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/saml2/idpresponse"
+  ApplicationSamlAudience:
+    Description: "Application SAML audience"
+    Value: !Sub "urn:amazon:cognito:sp:${UserPool}"
+
+  # OpenID
+  DiscoveryDocumentUrl:
+    Description: Discovery Document URL
+    Value: !Sub "${UserPool.ProviderURL}/.well-known/openid-configuration"
+  OidcClientId:
+    Value: !Ref UserPoolClient
+  OidcClientSecretCommand:
+    Description: See Value for CLI Command
+    Value: !Sub >-
+      aws cognito-idp describe-user-pool-client
+      --user-pool-id ${UserPool} --client-id ${UserPoolClient}
+      --query UserPoolClient.ClientSecret --output text
