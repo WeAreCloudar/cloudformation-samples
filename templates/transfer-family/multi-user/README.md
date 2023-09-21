@@ -1,6 +1,6 @@
 # Multi-tenancy with AWS Transfer Family
 
-The templates in this folder are created as part of a blogpost. There will be a link to the full post here once it's published.
+The templates in this folder are created as part of the blogpost [How Multi-Tenancy with AWS Transfer Family is a Cost-Effective Solution](https://aws.amazon.com/blogs/apn/how-multi-tenancy-with-aws-transfer-family-is-a-cost-effective-solution/)
 
 ## Templates
 - `server.yaml` will create an AWS Transfer Family SFTP Server, with an Amazon Simple Storage Server (Amazon S3) bucket as storage and an AWS Identity and Access Management (IAM) role to allow access from the server to the bucket.
