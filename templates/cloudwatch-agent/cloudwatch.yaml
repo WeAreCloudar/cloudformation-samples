@@ -1,0 +1,549 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "CloudWatch agent montoring"
+
+Parameters:
+  SSMdocumentName:
+    Type: String
+    Default: "ConfigureInstallCloudWatchAgent"
+
+Resources:
+  SSMDocumentCloudWatchAgent:
+    Type: "AWS::SSM::Document"
+    Properties:
+      Name: !Ref SSMdocumentName
+      DocumentType: "Command"
+      Content:
+        schemaVersion: "2.2"
+        description: "Install and configure CloudWatch agent"
+        parameters:
+          packageAction:
+            description: "(Required) Specify whether or not to install or uninstall the package."
+            type: "String"
+            allowedValues:
+              - "Install"
+              - "Uninstall"
+          cwAgentAction:
+            description: "The action CloudWatch Agent should take."
+            type: "String"
+            default: "configure"
+            allowedValues:
+              - "configure"
+              - "configure (append)"
+              - "configure (remove)"
+              - "start"
+              - "status"
+              - "stop"
+          installationType:
+            description: "(Optional) Specify the type of installation. Uninstall and reinstall: The application is taken offline until the reinstallation process completes. In-place update: The application is available while new or updated files are added to the installation."
+            type: "String"
+            allowedValues:
+              - "Uninstall and reinstall"
+              - "In-place update"
+            default: "Uninstall and reinstall"
+          version:
+            description: "(Optional) The version of the package to install or uninstall. If you don't specify a version, the system installs the latest published version by default. The system will only attempt to uninstall the version that is currently installed. If no version of the package is installed, the system returns an error."
+            type: "String"
+            allowedPattern: "^[a-zA-Z0-9._-]{0,128}$"
+            default: ""
+          additionalArguments:
+            description: "(Optional) The additional parameters to provide to your install, uninstall, or update scripts."
+            type: "StringMap"
+            displayType: "textarea"
+            default: {}
+            maxChars: 4096
+          mode:
+            description: "(Optional) Controls platform-specific default behavior such as whether to include EC2 Metadata in metrics."
+            type: "String"
+            default: "ec2"
+            allowedValues:
+              - "ec2"
+              - "onPremise"
+              - "auto"
+          optionalConfigurationSource:
+            description: "Only for 'configure' related actions. Use 'ssm' to apply a ssm parameter as config. Use 'default' to apply default config for amazon-cloudwatch-agent. Use 'all' with 'configure (remove)' to clean all configs for amazon-cloudwatch-agent."
+            type: "String"
+            allowedValues:
+              - "ssm"
+              - "default"
+              - "all"
+            default: "ssm"
+          optionalConfigurationLocation:
+            description: "Only for 'configure' related actions. Only needed when Optional Configuration Source is set to 'ssm'. The value should be a ssm parameter name."
+            type: "String"
+            default: ""
+            allowedValues:
+              - "AmazonCloudWatch-Windows"
+              - "AmazonCloudWatch-Linux"
+          optionalRestart:
+            description: "Only for 'configure' related actions. If 'yes', restarts the agent to use the new configuration. Otherwise the new config will only apply on the next agent restart."
+            type: "String"
+            default: "yes"
+            allowedValues:
+              - "yes"
+              - "no"
+        mainSteps:
+          - action: "aws:runPowerShellScript"
+            name: "createDownloadFolder"
+            precondition:
+              StringEquals:
+                - "platformType"
+                - "Windows"
+            inputs:
+              runCommand:
+                - "try {"
+                - "  $sku = (Get-CimInstance -ClassName Win32_OperatingSystem).OperatingSystemSKU"
+                - "  if ($sku -eq 143 -or $sku -eq 144) {"
+                - '    Write-Host "This document is not supported on Windows 2016 Nano Server."'
+                - "    exit 40"
+                - "  }"
+                - "  $ssmAgentService = Get-ItemProperty 'HKLM:SYSTEM\\\\CurrentControlSet\\\\Services\\\\AmazonSSMAgent\\\\'"
+                - "  if ($ssmAgentService -and [System.Version]$ssmAgentService.Version -ge [System.Version]'3.0.1031.0') {"
+                - "     exit 0"
+                - "  }"
+                - '  $DataFolder = "Application Data"'
+                - "  if ( ![string]::IsNullOrEmpty($env:ProgramData) ) {"
+                - "    $DataFolder = $env:ProgramData"
+                - "  } elseif ( ![string]::IsNullOrEmpty($env:AllUsersProfile) ) {"
+                - "    $DataFolder = \"$env:AllUsersProfile\\Application Data\""
+                - "  }"
+                - '  $TempFolder = "/"'
+                - "  if ( $env:Temp -ne $null ) {"
+                - "    $TempFolder = $env:Temp"
+                - "  }"
+                - "  $DataFolder = Join-Path $DataFolder 'Amazon\\SSM'"
+                - "  $DownloadFolder = Join-Path $TempFolder 'Amazon\\SSM'"
+                - "  if ( !( Test-Path -LiteralPath $DataFolder )) {"
+                - "    $none = New-Item -ItemType directory -Path $DataFolder"
+                - "  }"
+                - "  $DataACL = Get-Acl $DataFolder"
+                - "  if ( Test-Path -LiteralPath $DownloadFolder ) {"
+                - "    $DownloadACL = Get-Acl $DownloadFolder"
+                - "    $ACLDiff = Compare-Object ($DownloadACL.AccessToString) ($DataACL.AccessToString)"
+                - "    if ( $ACLDiff.count -eq 0 ) {"
+                - "      exit 0"
+                - "    }"
+                - "    Remove-Item $DownloadFolder -Recurse -Force"
+                - "  }"
+                - "  $none = New-Item -ItemType directory -Path $DownloadFolder"
+                - "  Set-Acl $DownloadFolder -aclobject $DataACL"
+                - "  $DownloadACL = Get-Acl $DownloadFolder"
+                - "  $ACLDiff = Compare-Object ($DownloadACL.AccessToString) ($DataACL.AccessToString)"
+                - "  if ( $ACLDiff.count -ne 0 ) {"
+                - '    Write-Error "Failed to create download folder" -ErrorAction Continue'
+                - "    exit 41"
+                - "  }"
+                - "} catch {"
+                - '  Write-Host  "Failed to create download folder"'
+                - "  Write-Error  $Error[0]  -ErrorAction Continue"
+                - "  exit 42"
+                - "}"
+          - action: "aws:configurePackage"
+            name: "configurePackage"
+            inputs:
+              name: "AmazonCloudWatchAgent"
+              action: "{{ packageAction }}"
+              installationType: "{{installationType}}"
+              version: "{{ version }}"
+              additionalArguments: "{{ additionalArguments }}"
+          - name: "ControlCloudWatchAgentWindows"
+            action: "aws:runPowerShellScript"
+            precondition:
+              StringEquals:
+                - "platformType"
+                - "Windows"
+            inputs:
+              runCommand:
+                - " Set-StrictMode -Version 2.0"
+                - " $ErrorActionPreference = 'Stop'"
+                - " $Cmd = \"${Env:ProgramFiles}\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\""
+                - ' if (!(Test-Path -LiteralPath "${Cmd}")) {'
+                - "     Write-Output 'CloudWatch Agent not installed.  Please install it using the AWS-ConfigureAWSPackage SSM Document.'"
+                - "     exit 1"
+                - " }"
+                - " $Params = @()"
+                - " $Action = '{{cwAgentAction}}'"
+                - " if ($Action -eq 'configure') {"
+                - "     $Action = 'fetch-config'"
+                - " } elseif ($Action -eq 'configure (append)') {"
+                - "     $Action = 'append-config'"
+                - " } elseif ($Action -eq 'configure (remove)') {"
+                - "     $Action = 'remove-config'"
+                - " }"
+                - " if ($Action -eq 'fetch-config' -Or $Action -eq 'append-config' -Or $Action -eq 'remove-config') {"
+                - "     $CWAConfig = '{{optionalConfigurationLocation}}'"
+                - "     if ('{{optionalConfigurationSource}}' -eq 'ssm') {"
+                - "         if ($CWAConfig) {"
+                - '             $CWAConfig = "ssm:${CWAConfig}"'
+                - "         }"
+                - "     } else {"
+                - "         $CWAConfig = '{{optionalConfigurationSource}}'"
+                - "     }"
+                - "     if (!$CWAConfig) {"
+                - "         Write-Output 'AmazonCloudWatchAgent config should be specified'"
+                - "         exit 1"
+                - "     }"
+                - "     if ($CWAConfig -eq 'all' -And $Action -ne 'remove-config') {"
+                - '         Write-Output ''Configuration location "all" can only be applied with action "remove-config"'''
+                - "         exit 1"
+                - "     }"
+                - '     $Params += (''-c'', "${CWAConfig}")'
+                - "     if ('{{optionalRestart}}' -eq 'yes') {"
+                - "         $Params += '-s'"
+                - "     }"
+                - " }"
+                - ' $Params += (''-a'', "${Action}", ''-m'', ''{{mode}}'')'
+                - ' Invoke-Expression "& ''${Cmd}'' ${Params}"'
+                - " Set-StrictMode -Off"
+                - " exit $LASTEXITCODE"
+          - action: "aws:runShellScript"
+            name: "ControlCloudWatchAgentLinux"
+            precondition:
+              StringEquals:
+                - "platformType"
+                - "Linux"
+            inputs:
+              runCommand:
+                - " #!/bin/sh"
+                - " set -e"
+                - " set -u"
+                - " cmd='/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl'"
+                - ' if [ ! -x "${cmd}" ]; then'
+                - "     echo 'CloudWatch Agent not installed.  Please install it using the AWS-ConfigureAWSPackage SSM Document.'"
+                - " exit 1"
+                - " fi"
+                - ' action="{{cwAgentAction}}"'
+                - ' if [ "${action}" = ''configure'' ]; then'
+                - "     action='fetch-config'"
+                - ' elif [ "${action}" = ''configure (append)'' ]; then'
+                - "     action='append-config'"
+                - ' elif [ "${action}" = ''configure (remove)'' ]; then'
+                - "     action='remove-config'"
+                - " fi"
+                - ' if [ "${action}" = ''fetch-config'' ] || [ "${action}" = ''append-config'' ] || [ "${action}" = ''remove-config'' ]; then'
+                - "     cwaconfig='{{optionalConfigurationLocation}}'"
+                - "     if [ '{{optionalConfigurationSource}}' = 'ssm' ]; then"
+                - '         if [ -n "${cwaconfig}" ]; then'
+                - '             cwaconfig="ssm:${cwaconfig}"'
+                - "         fi"
+                - "     else"
+                - "         cwaconfig='{{optionalConfigurationSource}}'"
+                - "     fi"
+                - '     if [ -z "${cwaconfig}" ]; then'
+                - "         echo 'AmazonCloudWatchAgent config should be specified'"
+                - "         exit 1"
+                - "     fi"
+                - '     cmd="${cmd} -c ${cwaconfig}"'
+                - '     if [ "${cwaconfig}" = ''all'' ] && [ "${action}" != ''remove-config'' ]; then'
+                - '         echo ''Configuration location "all" can only be applied with action "remove-config"'''
+                - "         exit 1"
+                - "     fi"
+                - "     if [ '{{optionalRestart}}' = 'yes' ]; then"
+                - '         cmd="${cmd} -s"'
+                - "     fi"
+                - " fi"
+                - ' cmd="${cmd} -a ${action} -m {{mode}}"'
+                - " ${cmd}"
+
+  # Windows association
+  CWAgentWinAssociation:
+    Type: "AWS::SSM::Association"
+    DependsOn: SSMDocumentCloudWatchAgent
+    Properties:
+      AssociationName: CloudWatchAgentWinInstallation
+      Name: !Ref SSMdocumentName
+      Targets:
+        - Key: "tag:OS"
+          Values:
+            - "Windows"
+      Parameters:
+        packageAction:
+          - Install
+        optionalConfigurationLocation:
+          - "AmazonCloudWatch-Windows"
+
+  # Linux association
+  CWAgentLinuxAssociation:
+    Type: "AWS::SSM::Association"
+    DependsOn: SSMDocumentCloudWatchAgent
+    Properties:
+      AssociationName: CloudWatchAgentLinuxInstallation
+      Name: !Ref SSMdocumentName
+      Targets:
+        - Key: "tag:OS"
+          Values:
+            - "Linux"
+      Parameters:
+        packageAction:
+          - Install
+        optionalConfigurationLocation:
+          - "AmazonCloudWatch-Linux"
+
+  AgentConfigWinParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: AmazonCloudWatch-Windows
+      Description: Custom CloudWatch config for Windows instances
+      Type: String
+      # Escape characters are required here https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent-New-Instances-CloudFormation.html
+      Value: |
+        {
+        	"metrics": {
+        		"aggregation_dimensions": [
+        			[
+        				"InstanceId"
+        			]
+        		],
+        		"append_dimensions": {
+        			"AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
+        			"InstanceId": "${!aws:InstanceId}"
+        		},
+            "namespace": "CW-Windows",
+        		"metrics_collected": {
+        			"LogicalDisk": {
+        				"measurement": [
+        					"% Free Space",
+        					"Free Megabytes"
+        				],
+        				"metrics_collection_interval": 60,
+        				"resources": [
+        					"C:",
+        					"D:"
+        				]
+        			},
+        			"Memory": {
+        				"measurement": [
+        					"% Committed Bytes In Use"
+        				],
+        				"metrics_collection_interval": 60
+        			},
+        			"Paging File": {
+        				"measurement": [
+        					"% Usage"
+        				],
+        				"metrics_collection_interval": 60,
+        				"resources": [
+        					"*"
+        				]
+        			},
+        			"PhysicalDisk": {
+        				"measurement": [
+        					"% Disk Time",
+        					"Disk Write Bytes/sec",
+        					"Disk Read Bytes/sec",
+        					"Disk Writes/sec",
+        					"Disk Reads/sec"
+        				],
+        				"metrics_collection_interval": 60,
+        				"resources": [
+        					"C:",
+        					"D:"
+        				]
+        			},
+        			"Processor": {
+        				"measurement": [
+        					"% User Time",
+        					"% Idle Time",
+        					"% Interrupt Time"
+        				],
+        				"metrics_collection_interval": 60,
+        				"resources": [
+        					"_Total"
+        				]
+        			},
+        			"TCPv4": {
+        				"measurement": [
+        					"Connections Established"
+        				],
+        				"metrics_collection_interval": 60
+        			},
+        			"TCPv6": {
+        				"measurement": [
+        					"Connections Established"
+        				],
+        				"metrics_collection_interval": 60
+        			},
+        			"statsd": {
+        				"metrics_aggregation_interval": 60,
+        				"metrics_collection_interval": 30,
+        				"service_address": ":8125"
+        			}
+        		}
+        	}
+        }
+
+  AgentConfigLinuxParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: AmazonCloudWatch-Linux
+      Description: Custom CloudWatch config for Linux instances
+      Type: String
+      # Escape characters are required here https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent-New-Instances-CloudFormation.html
+      Value: |
+        {
+          "agent": {
+            "metrics_collection_interval": 60,
+            "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+          },
+          "metrics": {
+        		"aggregation_dimensions": [
+        			[
+        				"InstanceId"
+        			]
+        		],
+        		"append_dimensions": {
+        			"AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
+        			"InstanceId": "${!aws:InstanceId}"
+        		},
+            "namespace": "CW-Linux",
+            "metrics_collected": {
+              "cpu": {
+                "resources": [
+                  "*"
+                ],
+                "measurement": [
+                  {
+                    "name": "cpu_usage_idle",
+                    "rename": "CPU_USAGE_IDLE",
+                    "unit": "Percent"
+                  },
+                  {
+                    "name": "cpu_usage_nice",
+                    "unit": "Percent"
+                  },
+                  "cpu_usage_guest"
+                ],
+                "totalcpu": false,
+                "metrics_collection_interval": 10
+              },
+              "disk": {
+                "resources": [
+                  "/",
+                  "/tmp"
+                ],
+                "measurement": [
+                  {
+                    "name": "free",
+                    "rename": "DISK_FREE",
+                    "unit": "Gigabytes"
+                  },
+                  "total",
+                  "used"
+                ],
+                "ignore_file_system_types": [
+                  "sysfs",
+                  "devtmpfs"
+                ],
+                "metrics_collection_interval": 60
+              },
+              "diskio": {
+                "resources": [
+                  "*"
+                ],
+                "measurement": [
+                  "reads",
+                  "writes",
+                  "read_time",
+                  "write_time",
+                  "io_time"
+                ],
+                "metrics_collection_interval": 60
+              },
+              "swap": {
+                "measurement": [
+                  "swap_used",
+                  "swap_free",
+                  "swap_used_percent"
+                ]
+              },
+              "mem": {
+                "measurement": [
+                  "mem_used",
+                  "mem_cached",
+                  "mem_total"
+                ],
+                "metrics_collection_interval": 1
+              },
+              "net": {
+                "resources": [
+                  "eth0"
+                ],
+                "measurement": [
+                  "bytes_sent",
+                  "bytes_recv",
+                  "drop_in",
+                  "drop_out"
+                ]
+              },
+              "netstat": {
+                "measurement": [
+                  "tcp_established",
+                  "tcp_syn_sent",
+                  "tcp_close"
+                ],
+                "metrics_collection_interval": 60
+              },
+              "processes": {
+                "measurement": [
+                  "running",
+                  "sleeping",
+                  "dead"
+                ]
+              }
+            },
+            "force_flush_interval": 30
+          }
+        }
+
+  IAMRoleforSSM:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "SSMforEC2"
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+
+  InstanceProfileforSSM:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "SSMforEC2"
+      Roles:
+        - !Ref IAMRoleforSSM
+
+  IAMPolicySSMParameter:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: CW-SSMParameter
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ssm:GetParameter"
+            Resource: "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
+      Roles:
+        - !Ref IAMRoleforSSM
+
+Outputs:
+  AgentConfigWinParameterName:
+    Description: SSM parameter name for Windows agent configuration
+    Value: !Ref AgentConfigWinParameter
+  AgentConfigWLinuxParameterName:
+    Description: SSM parameter name for Linux agent configuration
+    Value: !Ref AgentConfigLinuxParameter
+  IAMRoleforSSMName:
+    Description: SSM role for EC2 instances
+    Value: !Ref IAMRoleforSSM
+  SSMDocumentCloudWatchAgentName:
+    Description: Combined installation & configuration SSM document
+    Value: !Ref SSMDocumentCloudWatchAgent
