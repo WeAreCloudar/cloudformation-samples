@@ -1,0 +1,151 @@
+Resources:
+  RootCa4TrustAnchor:
+    Type: AWS::RolesAnywhere::TrustAnchor
+    Properties:
+      Name: !Sub ${AWS::StackName}-RootCa4
+      Enabled: true  # by default this is false
+      Source: 
+        SourceType: "CERTIFICATE_BUNDLE"
+        SourceData:
+          # http http://certs.eid.belgium.be/belgiumrca4.crt  | openssl x509
+          X509CertificateData: |
+            -----BEGIN CERTIFICATE-----
+            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
+            -----END CERTIFICATE-----
+  
+  RootCa6TrustAnchor:
+    Type: AWS::RolesAnywhere::TrustAnchor
+    Properties:
+      Name: !Sub ${AWS::StackName}-RootCa6
+      Enabled: true  # by default this is false
+      Source: 
+        SourceType: "CERTIFICATE_BUNDLE"
+        SourceData:
+          # http https://crt.eidpki.belgium.be/eid/brca6.crt  | openssl x509
+          X509CertificateData: |
+            -----BEGIN CERTIFICATE-----
+            MIIDaDCCAu2gAwIBAgIUcYtX/2tpPlocI17Yh6PvUfQBDyYwCgYIKoZIzj0EAwMw
+            geAxCzAJBgNVBAYTAkJFMREwDwYDVQQHDAhCcnVzc2VsczEwMC4GA1UECgwnS2lu
+            Z2RvbSBvZiBCZWxnaXVtIC0gRmVkZXJhbCBHb3Zlcm5tZW50MTYwNAYDVQQLDC1G
+            UFMgSG9tZSBBZmZhaXJzIC0gQklLLUdDSSAoTlRSQkUtMDM2MjQ3NTUzOCkxOTA3
+            BgNVBAsMMEZQUyBQb2xpY3kgYW5kIFN1cHBvcnQgLSBCT1NBIChOVFJCRS0wNjcx
+            NTE2NjQ3KTEZMBcGA1UEAwwQQmVsZ2l1bSBSb290IENBNjAeFw0yMDA2MDMxMDAx
+            MzFaFw00MDA2MDMxMDAxMzFaMIHgMQswCQYDVQQGEwJCRTERMA8GA1UEBwwIQnJ1
+            c3NlbHMxMDAuBgNVBAoMJ0tpbmdkb20gb2YgQmVsZ2l1bSAtIEZlZGVyYWwgR292
+            ZXJubWVudDE2MDQGA1UECwwtRlBTIEhvbWUgQWZmYWlycyAtIEJJSy1HQ0kgKE5U
+            UkJFLTAzNjI0NzU1MzgpMTkwNwYDVQQLDDBGUFMgUG9saWN5IGFuZCBTdXBwb3J0
+            IC0gQk9TQSAoTlRSQkUtMDY3MTUxNjY0NykxGTAXBgNVBAMMEEJlbGdpdW0gUm9v
+            dCBDQTYwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAR532ARaLVsPSf5Pz9+b5ExaxpC
+            e8iGGkDgkbUlGM0ulbr0YqbKva7EoOAY+YL5ZJs8S0KIsuQNc0f2vgI8xcyPQHge
+            CaLcw0OzvmfCHf/OMOIozEKgKaAK6pHvaBXP0tijZjBkMBIGA1UdEwEB/wQIMAYB
+            Af8CAQEwHwYDVR0jBBgwFoAULqCIsAsNYonsHT/Un8ySRI5IaUYwHQYDVR0OBBYE
+            FC6giLALDWKJ7B0/1J/MkkSOSGlGMA4GA1UdDwEB/wQEAwIBBjAKBggqhkjOPQQD
+            AwNpADBmAjEAt2e2vVG4/aMjIokbQQuCnvI8so8rZl/IbKupMCJitfFi7oVlHllY
+            FDdYMDTKWLZgAjEAsa2wuz3Ew6/68XXtIT+51snqkl2KLlaVgKXYlpTh2zqQBIBd
+            KO1nMO/rQRfuZ701
+            -----END CERTIFICATE-----
+
+  RolesAnywhereRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: rolesanywhere.amazonaws.com
+          Action:
+            - sts:AssumeRole
+            - sts:TagSession
+            - sts:SetSourceIdentity
+          Condition:
+            # The Subject, Issuer, and Subject Alternative Name (SAN) fields from X509 certificates are extracted and
+            # used as PrincipalTag elements in the session. Without a Condition statement present in a role trust
+            # policy, any valid certificate from the CA used as the trust anchor, or CAs subordinate to that trust
+            # anchor may be used to assume a role via IAM roles anywhere. We recommend you use Condition statements on
+            # both the subject and issuer attributes to ensure that only certificates that you intend to be able to 
+            # assume a role can do so.
+            StringLike:
+              # Only allow the subordinate CAs that are used for eID Cards 
+              aws:PrincipalTag/x509Issuer/CN:
+                - "Citizen CA"
+                - "Foreigner CA"
+            ArnEquals:
+              # Only allow our trust anchors
+              aws:SourceArn:
+                - !GetAtt RootCa4TrustAnchor.TrustAnchorArn
+                - !GetAtt RootCa6TrustAnchor.TrustAnchorArn
+  Profile:
+    Type: AWS::RolesAnywhere::Profile
+    Properties:
+      Name: !Sub ${AWS::StackName}-Profile
+      Enabled: true  # by default this is false
+      DurationSeconds: 3600  # between 900 and 43200
+      RoleArns: 
+        - !GetAtt RolesAnywhereRole.Arn
+  
+  TestBucket:
+    Type: AWS::S3::Bucket
+  
+  TestPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: [!Ref RolesAnywhereRole]
+      PolicyName: TestPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # We allow uploads to s3://$bucket/serialNumber/$national_number/*
+          Effect: Allow
+          Action: s3:PutObject
+          Resource: !Sub
+            - "${TestBucket.Arn}/serialNumber/${Value}/*"
+            - Value: ${aws:PrincipalTag/x509Subject/serialNumber}
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt RolesAnywhereRole.Arn
+    Description: --role-arn
+  ProfileArn:
+    Value: !GetAtt Profile.ProfileArn
+    Description: --profile-arn
+  TrustAnchor4Arn:
+    Value: !GetAtt RootCa4TrustAnchor.TrustAnchorArn
+    Description: --trust-anchor-arn
+  TrustAnchor6Arn:
+    Value: !GetAtt RootCa6TrustAnchor.TrustAnchorArn
+    Description: --trust-anchor-arn
+  Region:
+    Value: !Ref AWS::Region
+    Description: --region
+  Bucket:
+    Value: !Ref TestBucket
